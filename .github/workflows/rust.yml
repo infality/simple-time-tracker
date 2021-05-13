@@ -18,3 +18,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build
       run: cargo build --release --verbose
+    - uses: actions/upload-artifact@v2
+      with:
+        name: release-win
+        path: target/release/simple_time_tracker
