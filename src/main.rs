@@ -1,7 +1,7 @@
 use iced::{
-    button, executor, scrollable, text_input, time, Application, Button, Clipboard, Color, Column,
-    Command, Container, Element, Length, Row, Scrollable, Settings, Space, Subscription, Text,
-    TextInput,
+    button, executor, scrollable, text_input, time, tooltip, Application, Button, Clipboard, Color,
+    Column, Command, Container, Element, Length, Row, Scrollable, Settings, Space, Subscription,
+    Text, TextInput, Tooltip,
 };
 
 pub fn main() -> iced::Result {
@@ -34,6 +34,17 @@ struct TrackedTime {
     delete_button: button::State,
 }
 
+impl TrackedTime {
+    fn new(name: String, duration: chrono::Duration) -> Self {
+        TrackedTime {
+            name,
+            duration,
+            copy_button: button::State::new(),
+            delete_button: button::State::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Message {
     TimeUpdate,
@@ -44,6 +55,82 @@ enum Message {
     ApplyOperation,
     DeleteTrackedTime(usize),
     CopyText(usize),
+}
+
+impl SimpleTimeTracker {
+    fn apply_operation(&mut self) {
+        let timer = match self.is_running {
+            true => chrono::Local::now() - self.start_time,
+            false => self.pause_time - self.start_time,
+        };
+        let mut duration = chrono::Duration::zero();
+
+        // Parse time input
+        if self.time_input.len() > 0 {
+            let parts = self.time_input.split(':').collect::<Vec<&str>>();
+            if parts.len() > 2 {
+                return;
+            }
+
+            // Parse minutes
+            let minutes = parts[0].parse();
+            if let Ok(m) = minutes {
+                if m >= 60 || (timer.num_hours() < 1 && m > timer.num_minutes()) {
+                    return;
+                }
+                duration = duration.checked_add(&chrono::Duration::minutes(m)).unwrap();
+            } else {
+                return;
+            }
+
+            // Parse hours
+            if parts.len() == 2 {
+                let hours = parts[1].parse();
+                if let Ok(h) = hours {
+                    if h > timer.num_hours() {
+                        return;
+                    }
+                    duration = duration.checked_add(&chrono::Duration::hours(h)).unwrap();
+                } else {
+                    return;
+                }
+            }
+        } else {
+            duration = timer;
+        }
+
+        // Ensure only either name or index is set
+        if (self.name_input.len() > 0) == (self.index_input.len() > 0) {
+            return;
+        }
+
+        if self.name_input.len() > 0 {
+            self.tracked_times
+                .push(TrackedTime::new(self.name_input.clone(), duration));
+        } else {
+            let index = self.index_input.parse::<usize>().unwrap();
+            if index == 0 || index > self.tracked_times.len() {
+                return;
+            }
+
+            self.tracked_times[index - 1].duration = match self.tracked_times[index - 1]
+                .duration
+                .checked_add(&duration)
+            {
+                Some(d) => d,
+                None => return,
+            };
+        }
+        self.time_input.clear();
+        self.name_input.clear();
+        self.index_input.clear();
+        if self.is_running {
+            self.start_time = chrono::Local::now();
+        } else {
+            self.start_time = chrono::Local::now();
+            self.pause_time = self.start_time.clone();
+        }
+    }
 }
 
 impl Application for SimpleTimeTracker {
@@ -118,11 +205,13 @@ impl Application for SimpleTimeTracker {
             }
             Message::NameInputChanged(input) => self.name_input = input,
             Message::IndexInputChanged(input) => {
-                if input.len() == 0 || (input.len() < 3 && input.parse::<u8>().is_ok()) {
+                if input.len() == 0 || (input.len() < 3 && input.parse::<usize>().is_ok()) {
                     self.index_input = input
                 }
             }
-            Message::ApplyOperation => (),
+            Message::ApplyOperation => {
+                self.apply_operation();
+            }
             Message::DeleteTrackedTime(i) => drop(self.tracked_times.remove(i)),
             Message::CopyText(i) => clipboard.write(self.tracked_times[i].name.clone()),
         }
@@ -262,7 +351,16 @@ impl Application for SimpleTimeTracker {
                             .size(28),
                         )
                         .push(Space::new(Length::Units(12), Length::Shrink))
-                        .push(Text::new(&tracked_time.name).size(28))
+                        .push(
+                            Tooltip::new(
+                                Text::new(&tracked_time.name)
+                                    .size(28)
+                                    .width(Length::Units(400)),
+                                &tracked_time.name,
+                                tooltip::Position::FollowCursor,
+                            )
+                            .style(style::TooltipStyle),
+                        )
                         .push(Space::new(Length::Fill, Length::Shrink))
                         .push(
                             Button::new(
@@ -394,6 +492,18 @@ mod style {
             container::Style {
                 background: Some(Background::Color(Color::from_rgb8(0xff, 0xb0, 0x60))),
                 border_width: 0.0,
+                ..container::Style::default()
+            }
+        }
+    }
+
+    pub struct TooltipStyle;
+
+    impl container::StyleSheet for TooltipStyle {
+        fn style(&self) -> container::Style {
+            container::Style {
+                text_color: Some(Color::from_rgb8(0xee, 0xee, 0xee)),
+                background: Some(Background::Color(Color::from_rgb8(0x40, 0x40, 0x40))),
                 ..container::Style::default()
             }
         }
