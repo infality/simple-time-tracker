@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 use iced::{
     button, executor, scrollable, text_input, time, tooltip, Application, Button, Clipboard, Color,
     Column, Command, Container, Element, Length, Row, Scrollable, Settings, Space, Subscription,
