@@ -2,13 +2,19 @@
 mod style;
 
 use iced::{
-    button, executor, scrollable, text_input, time, tooltip, Application, Button, Clipboard, Color,
-    Column, Command, Container, Element, Length, Row, Scrollable, Settings, Space, Subscription,
-    Text, TextInput, Tooltip,
+    button, executor, scrollable, text_input, time, tooltip, window, Application, Button,
+    Clipboard, Color, Column, Command, Container, Element, Length, Row, Rule, Scrollable, Settings,
+    Space, Subscription, Text, TextInput, Tooltip,
 };
 
 pub fn main() -> iced::Result {
-    SimpleTimeTracker::run(Settings::default())
+    SimpleTimeTracker::run(Settings {
+        window: window::Settings {
+            min_size: Some((750, 400)),
+            ..window::Settings::default()
+        },
+        ..Settings::default()
+    })
 }
 
 struct SimpleTimeTracker {
@@ -261,55 +267,109 @@ impl Application for SimpleTimeTracker {
         let timer_operations = Container::new(
             Row::new()
                 .push(Space::new(Length::Units(12), Length::Shrink))
-                .push(Container::new(Text::new("Add")).padding(4))
                 .push(
-                    TextInput::new(
-                        &mut self.time_text_input,
-                        "all",
-                        &self.time_input,
-                        Message::TimeInputChanged,
-                    )
-                    .padding(3)
-                    .width(Length::Units(50))
-                    .style(style::TextInputStyle),
+                    Container::new(Text::new("Add "))
+                        .height(Length::Fill)
+                        .center_y(),
                 )
-                .push(Container::new(Text::new("to new entry with description")).padding(4))
                 .push(
-                    TextInput::new(
-                        &mut self.description_text_input,
-                        "",
-                        &self.description_input,
-                        Message::DescriptionInputChanged,
+                    Container::new(
+                        TextInput::new(
+                            &mut self.time_text_input,
+                            "all",
+                            &self.time_input,
+                            Message::TimeInputChanged,
+                        )
+                        .padding(3)
+                        .width(Length::Units(50))
+                        .style(style::TextInputStyle),
                     )
-                    .padding(3)
-                    .style(style::TextInputStyle),
+                    .height(Length::Fill)
+                    .center_y(),
                 )
-                .push(Container::new(Text::new("or existing with number")).padding(4))
+                .push(Space::new(Length::Units(16), Length::Shrink))
                 .push(
-                    TextInput::new(
-                        &mut self.index_text_input,
-                        "",
-                        &self.index_input,
-                        Message::IndexInputChanged,
-                    )
-                    .padding(3)
-                    .width(Length::Units(25))
-                    .style(style::TextInputStyle),
+                    Column::new()
+                        .push(
+                            Row::new()
+                                .push(
+                                    Container::new(Text::new("to new entry called "))
+                                        .height(Length::Fill)
+                                        .center_y(),
+                                )
+                                .push(
+                                    Container::new(
+                                        TextInput::new(
+                                            &mut self.description_text_input,
+                                            "description",
+                                            &self.description_input,
+                                            Message::DescriptionInputChanged,
+                                        )
+                                        .padding(3)
+                                        .style(style::TextInputStyle),
+                                    )
+                                    .height(Length::Fill)
+                                    .width(Length::Fill)
+                                    .center_y(),
+                                )
+                                .height(Length::FillPortion(3)),
+                        )
+                        .push(
+                            Row::new()
+                                .push(Rule::horizontal(8).style(style::RuleStyle))
+                                .push(
+                                    Container::new(Text::new("or"))
+                                        .height(Length::Fill)
+                                        .center_y(),
+                                )
+                                .push(Rule::horizontal(8).style(style::RuleStyle))
+                                .height(Length::FillPortion(2)),
+                        )
+                        .push(
+                            Row::new()
+                                .push(
+                                    Container::new(Text::new("existing entry with number "))
+                                        .height(Length::Fill)
+                                        .center_y(),
+                                )
+                                .push(
+                                    Container::new(
+                                        TextInput::new(
+                                            &mut self.index_text_input,
+                                            "#",
+                                            &self.index_input,
+                                            Message::IndexInputChanged,
+                                        )
+                                        .padding(3)
+                                        .width(Length::Units(25))
+                                        .style(style::TextInputStyle),
+                                    )
+                                    .height(Length::Fill)
+                                    .center_y(),
+                                )
+                                .height(Length::FillPortion(3)),
+                        )
+                        .width(Length::Fill),
                 )
-                .push(Space::new(Length::Units(8), Length::Shrink))
+                .push(Space::new(Length::Units(16), Length::Shrink))
                 .push(
-                    Button::new(
-                        &mut self.apply_operation_button,
-                        Row::new()
-                            .push(Space::new(Length::Units(8), Length::Shrink))
-                            .push(Text::new("Apply"))
-                            .push(Space::new(Length::Units(8), Length::Shrink)),
+                    Container::new(
+                        Button::new(
+                            &mut self.apply_operation_button,
+                            Row::new()
+                                .push(Space::new(Length::Units(8), Length::Shrink))
+                                .push(Text::new("Apply"))
+                                .push(Space::new(Length::Units(8), Length::Shrink)),
+                        )
+                        .on_press(Message::ApplyOperation)
+                        .padding(3)
+                        .style(style::ButtonStyle { foreground: None }),
                     )
-                    .on_press(Message::ApplyOperation)
-                    .padding(3)
-                    .style(style::ButtonStyle { foreground: None }),
+                    .height(Length::Fill)
+                    .center_y(),
                 )
-                .push(Space::new(Length::Units(16), Length::Shrink)),
+                .push(Space::new(Length::Units(16), Length::Shrink))
+                .height(Length::Units(80)),
         )
         .width(Length::Fill)
         .center_x();
@@ -343,7 +403,7 @@ impl Application for SimpleTimeTracker {
                             Tooltip::new(
                                 Text::new(&tracked_time.description)
                                     .size(28)
-                                    .width(Length::Units(400)),
+                                    .width(Length::Units(300)),
                                 &tracked_time.description,
                                 tooltip::Position::FollowCursor,
                             )
@@ -412,4 +472,3 @@ impl Application for SimpleTimeTracker {
         .into()
     }
 }
-

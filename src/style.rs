@@ -1,4 +1,4 @@
-use iced::{button, container, text_input, Background, Color};
+use iced::{button, container, rule, text_input, Background, Color};
 
 pub struct TimerStyle {
     pub is_running: bool,
@@ -43,6 +43,19 @@ impl text_input::StyleSheet for TextInputStyle {
 
     fn selection_color(&self) -> Color {
         Color::from_rgb8(0xb0, 0xb0, 0xb0)
+    }
+}
+
+pub struct RuleStyle;
+
+impl rule::StyleSheet for RuleStyle {
+    fn style(&self) -> rule::Style {
+        rule::Style {
+            color: Color::from_rgb8(0x90, 0x90, 0x90),
+            width: 1,
+            radius: 0.0,
+            fill_mode: rule::FillMode::Padded(8),
+        }
     }
 }
 
