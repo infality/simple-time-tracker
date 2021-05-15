@@ -266,28 +266,32 @@ impl Application for SimpleTimeTracker {
 
         let timer_operations = Container::new(
             Row::new()
-                .push(Space::new(Length::Units(12), Length::Shrink))
                 .push(
-                    Container::new(Text::new("Add "))
-                        .height(Length::Fill)
-                        .center_y(),
-                )
-                .push(
-                    Container::new(
-                        TextInput::new(
-                            &mut self.time_text_input,
-                            "all",
-                            &self.time_input,
-                            Message::TimeInputChanged,
+                    Row::new()
+                        .push(Space::new(Length::Fill, Length::Shrink))
+                        .push(
+                            Container::new(Text::new("Add "))
+                                .height(Length::Fill)
+                                .center_y(),
                         )
-                        .padding(3)
-                        .width(Length::Units(50))
-                        .style(style::TextInputStyle),
-                    )
-                    .height(Length::Fill)
-                    .center_y(),
+                        .push(
+                            Container::new(
+                                TextInput::new(
+                                    &mut self.time_text_input,
+                                    "all",
+                                    &self.time_input,
+                                    Message::TimeInputChanged,
+                                )
+                                .padding(3)
+                                .width(Length::Units(50))
+                                .style(style::TextInputStyle),
+                            )
+                            .height(Length::Fill)
+                            .center_y(),
+                        )
+                        .push(Space::new(Length::Units(16), Length::Shrink))
+                        .width(Length::FillPortion(1)),
                 )
-                .push(Space::new(Length::Units(16), Length::Shrink))
                 .push(
                     Column::new()
                         .push(
@@ -349,26 +353,30 @@ impl Application for SimpleTimeTracker {
                                 )
                                 .height(Length::FillPortion(3)),
                         )
-                        .width(Length::Fill),
+                        .width(Length::FillPortion(2)),
                 )
-                .push(Space::new(Length::Units(16), Length::Shrink))
                 .push(
-                    Container::new(
-                        Button::new(
-                            &mut self.apply_operation_button,
-                            Row::new()
-                                .push(Space::new(Length::Units(8), Length::Shrink))
-                                .push(Text::new("Apply"))
-                                .push(Space::new(Length::Units(8), Length::Shrink)),
+                    Row::new()
+                        .push(Space::new(Length::Units(16), Length::Shrink))
+                        .push(
+                            Container::new(
+                                Button::new(
+                                    &mut self.apply_operation_button,
+                                    Row::new()
+                                        .push(Space::new(Length::Units(8), Length::Shrink))
+                                        .push(Text::new("Apply"))
+                                        .push(Space::new(Length::Units(8), Length::Shrink)),
+                                )
+                                .on_press(Message::ApplyOperation)
+                                .padding(3)
+                                .style(style::ButtonStyle { foreground: None }),
+                            )
+                            .height(Length::Fill)
+                            .center_y(),
                         )
-                        .on_press(Message::ApplyOperation)
-                        .padding(3)
-                        .style(style::ButtonStyle { foreground: None }),
-                    )
-                    .height(Length::Fill)
-                    .center_y(),
+                        .push(Space::new(Length::Fill, Length::Shrink))
+                        .width(Length::FillPortion(1)),
                 )
-                .push(Space::new(Length::Units(16), Length::Shrink))
                 .height(Length::Units(80)),
         )
         .width(Length::Fill)
