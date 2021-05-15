@@ -18,8 +18,8 @@ struct SimpleTimeTracker {
     start_stop_button: button::State,
     time_text_input: text_input::State,
     time_input: String,
-    name_text_input: text_input::State,
-    name_input: String,
+    description_text_input: text_input::State,
+    description_input: String,
     index_text_input: text_input::State,
     index_input: String,
     apply_operation_button: button::State,
@@ -28,7 +28,7 @@ struct SimpleTimeTracker {
 
 #[derive(Debug, Clone)]
 struct TrackedTime {
-    name: String,
+    description: String,
     duration: chrono::Duration,
 
     copy_button: button::State,
@@ -36,9 +36,9 @@ struct TrackedTime {
 }
 
 impl TrackedTime {
-    fn new(name: String, duration: chrono::Duration) -> Self {
+    fn new(description: String, duration: chrono::Duration) -> Self {
         TrackedTime {
-            name,
+            description,
             duration,
             copy_button: button::State::new(),
             delete_button: button::State::new(),
@@ -51,7 +51,7 @@ enum Message {
     TimeUpdate,
     StartStopTimer,
     TimeInputChanged(String),
-    NameInputChanged(String),
+    DescriptionInputChanged(String),
     IndexInputChanged(String),
     ApplyOperation,
     DeleteTrackedTime(usize),
@@ -100,14 +100,14 @@ impl SimpleTimeTracker {
             duration = timer;
         }
 
-        // Ensure only either name or index is set
-        if (self.name_input.len() > 0) == (self.index_input.len() > 0) {
+        // Ensure only either description or index is set
+        if (self.description_input.len() > 0) == (self.index_input.len() > 0) {
             return;
         }
 
-        if self.name_input.len() > 0 {
+        if self.description_input.len() > 0 {
             self.tracked_times
-                .push(TrackedTime::new(self.name_input.clone(), duration));
+                .push(TrackedTime::new(self.description_input.clone(), duration));
         } else {
             let index = self.index_input.parse::<usize>().unwrap();
             if index == 0 || index > self.tracked_times.len() {
@@ -123,7 +123,7 @@ impl SimpleTimeTracker {
             };
         }
         self.time_input.clear();
-        self.name_input.clear();
+        self.description_input.clear();
         self.index_input.clear();
         if self.is_running {
             self.start_time = chrono::Local::now();
@@ -140,33 +140,18 @@ impl Application for SimpleTimeTracker {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
-        let mut temp = Vec::new();
-        temp.push(TrackedTime {
-            name: String::from("Test"),
-            duration: chrono::Duration::hours(2),
-
-            copy_button: button::State::new(),
-            delete_button: button::State::new(),
-        });
-        temp.push(TrackedTime {
-            name: String::from("Test"),
-            duration: chrono::Duration::hours(2),
-
-            copy_button: button::State::new(),
-            delete_button: button::State::new(),
-        });
         (
             Self {
                 is_running: false,
                 start_time: chrono::Local::now(),
                 pause_time: chrono::Local::now(),
-                tracked_times: temp,
+                tracked_times: Vec::new(),
 
                 start_stop_button: button::State::new(),
                 time_text_input: text_input::State::new(),
                 time_input: String::new(),
-                name_text_input: text_input::State::new(),
-                name_input: String::new(),
+                description_text_input: text_input::State::new(),
+                description_input: String::new(),
                 index_text_input: text_input::State::new(),
                 index_input: String::new(),
                 apply_operation_button: button::State::new(),
@@ -204,7 +189,7 @@ impl Application for SimpleTimeTracker {
                     }
                 }
             }
-            Message::NameInputChanged(input) => self.name_input = input,
+            Message::DescriptionInputChanged(input) => self.description_input = input,
             Message::IndexInputChanged(input) => {
                 if input.len() == 0 || (input.len() < 3 && input.parse::<usize>().is_ok()) {
                     self.index_input = input
@@ -214,7 +199,7 @@ impl Application for SimpleTimeTracker {
                 self.apply_operation();
             }
             Message::DeleteTrackedTime(i) => drop(self.tracked_times.remove(i)),
-            Message::CopyText(i) => clipboard.write(self.tracked_times[i].name.clone()),
+            Message::CopyText(i) => clipboard.write(self.tracked_times[i].description.clone()),
         }
 
         Command::none()
@@ -286,13 +271,13 @@ impl Application for SimpleTimeTracker {
                     .width(Length::Units(50))
                     .style(style::TextInputStyle),
                 )
-                .push(Container::new(Text::new("to new entry with name")).padding(4))
+                .push(Container::new(Text::new("to new entry with description")).padding(4))
                 .push(
                     TextInput::new(
-                        &mut self.name_text_input,
+                        &mut self.description_text_input,
                         "",
-                        &self.name_input,
-                        Message::NameInputChanged,
+                        &self.description_input,
+                        Message::DescriptionInputChanged,
                     )
                     .padding(3)
                     .style(style::TextInputStyle),
@@ -354,10 +339,10 @@ impl Application for SimpleTimeTracker {
                         .push(Space::new(Length::Units(12), Length::Shrink))
                         .push(
                             Tooltip::new(
-                                Text::new(&tracked_time.name)
+                                Text::new(&tracked_time.description)
                                     .size(28)
                                     .width(Length::Units(400)),
-                                &tracked_time.name,
+                                &tracked_time.description,
                                 tooltip::Position::FollowCursor,
                             )
                             .style(style::TooltipStyle),
@@ -368,7 +353,7 @@ impl Application for SimpleTimeTracker {
                                 &mut tracked_time.copy_button,
                                 Row::new()
                                     .push(Space::new(Length::Units(8), Length::Shrink))
-                                    .push(Text::new("Copy"))
+                                    .push(Text::new("Copy Text"))
                                     .push(Space::new(Length::Units(8), Length::Shrink)),
                             )
                             .on_press(Message::CopyText(i))
