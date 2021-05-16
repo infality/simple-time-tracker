@@ -82,7 +82,11 @@ impl SimpleTimeTracker {
             }
 
             // Parse minutes
-            let minutes = parts[0].parse();
+            let minutes = if parts.len() == 2 {
+                parts[1].parse()
+            } else {
+                parts[0].parse()
+            };
             if let Ok(m) = minutes {
                 if m >= 60 || (timer.num_hours() < 1 && m > timer.num_minutes()) {
                     return;
@@ -94,7 +98,7 @@ impl SimpleTimeTracker {
 
             // Parse hours
             if parts.len() == 2 {
-                let hours = parts[1].parse();
+                let hours = parts[0].parse();
                 if let Ok(h) = hours {
                     if h > timer.num_hours() {
                         return;
@@ -134,10 +138,9 @@ impl SimpleTimeTracker {
         self.description_input.clear();
         self.index_input.clear();
         if self.is_running {
-            self.start_time = chrono::Local::now();
+            self.start_time = self.start_time + duration;
         } else {
-            self.start_time = chrono::Local::now();
-            self.pause_time = self.start_time.clone();
+            self.pause_time = self.pause_time - duration;
         }
     }
 }
@@ -268,7 +271,7 @@ impl Application for SimpleTimeTracker {
             Row::new()
                 .push(
                     Row::new()
-                        .push(Space::new(Length::Fill, Length::Shrink))
+                        .push(Space::with_width(Length::Fill))
                         .push(
                             Container::new(Text::new("Add "))
                                 .height(Length::Fill)
@@ -289,7 +292,7 @@ impl Application for SimpleTimeTracker {
                             .height(Length::Fill)
                             .center_y(),
                         )
-                        .push(Space::new(Length::Units(16), Length::Shrink))
+                        .push(Space::with_width(Length::Units(16)))
                         .width(Length::FillPortion(1)),
                 )
                 .push(
@@ -357,15 +360,15 @@ impl Application for SimpleTimeTracker {
                 )
                 .push(
                     Row::new()
-                        .push(Space::new(Length::Units(16), Length::Shrink))
+                        .push(Space::with_width(Length::Units(16)))
                         .push(
                             Container::new(
                                 Button::new(
                                     &mut self.apply_operation_button,
                                     Row::new()
-                                        .push(Space::new(Length::Units(8), Length::Shrink))
+                                        .push(Space::with_width(Length::Units(12)))
                                         .push(Text::new("Apply"))
-                                        .push(Space::new(Length::Units(8), Length::Shrink)),
+                                        .push(Space::with_width(Length::Units(12))),
                                 )
                                 .on_press(Message::ApplyOperation)
                                 .padding(3)
@@ -374,7 +377,7 @@ impl Application for SimpleTimeTracker {
                             .height(Length::Fill)
                             .center_y(),
                         )
-                        .push(Space::new(Length::Fill, Length::Shrink))
+                        .push(Space::with_width(Length::Fill))
                         .width(Length::FillPortion(1)),
                 )
                 .height(Length::Units(80)),
@@ -391,13 +394,13 @@ impl Application for SimpleTimeTracker {
                         .push(
                             Container::new(
                                 Row::new()
-                                    .push(Space::new(Length::Units(4), Length::Shrink))
+                                    .push(Space::with_width(Length::Units(4)))
                                     .push(Text::new(format!("{}", i + 1)).size(28))
-                                    .push(Space::new(Length::Units(4), Length::Shrink)),
+                                    .push(Space::with_width(Length::Units(4))),
                             )
                             .style(style::IndexStyle),
                         )
-                        .push(Space::new(Length::Units(8), Length::Shrink))
+                        .push(Space::with_width(Length::Units(8)))
                         .push(
                             Text::new(format!(
                                 "{}:{:02}",
@@ -406,39 +409,40 @@ impl Application for SimpleTimeTracker {
                             ))
                             .size(28),
                         )
-                        .push(Space::new(Length::Units(12), Length::Shrink))
+                        .push(Space::with_width(Length::Units(12)))
                         .push(
                             Tooltip::new(
                                 Text::new(&tracked_time.description)
                                     .size(28)
-                                    .width(Length::Units(300)),
+                                    .width(Length::Fill),
                                 &tracked_time.description,
                                 tooltip::Position::FollowCursor,
                             )
                             .style(style::TooltipStyle),
                         )
-                        .push(Space::new(Length::Fill, Length::Shrink))
                         .push(
                             Button::new(
                                 &mut tracked_time.copy_button,
                                 Row::new()
-                                    .push(Space::new(Length::Units(8), Length::Shrink))
+                                    .push(Space::with_width(Length::Units(8)))
                                     .push(Text::new("Copy Text"))
-                                    .push(Space::new(Length::Units(8), Length::Shrink)),
+                                    .push(Space::with_width(Length::Units(8))),
                             )
                             .on_press(Message::CopyText(i))
+                            .width(Length::Shrink)
                             .style(style::ButtonStyle { foreground: None }),
                         )
-                        .push(Space::new(Length::Units(8), Length::Shrink))
+                        .push(Space::with_width(Length::Units(8)))
                         .push(
                             Button::new(
                                 &mut tracked_time.delete_button,
                                 Row::new()
-                                    .push(Space::new(Length::Units(8), Length::Shrink))
+                                    .push(Space::with_width(Length::Units(8)))
                                     .push(Text::new("Delete"))
-                                    .push(Space::new(Length::Units(8), Length::Shrink)),
+                                    .push(Space::with_width(Length::Units(8))),
                             )
                             .on_press(Message::DeleteTrackedTime(i))
+                            .width(Length::Shrink)
                             .style(style::ButtonStyle {
                                 foreground: Some(Color::from_rgb8(0xc8, 0x40, 0x00)),
                             }),
@@ -458,15 +462,15 @@ impl Application for SimpleTimeTracker {
                     Container::new(
                         Row::new()
                             .push(time)
-                            .push(Space::new(Length::Units(12), Length::Shrink))
+                            .push(Space::with_width(Length::Units(12)))
                             .push(start_stop_button),
                     )
                     .width(Length::Fill)
                     .center_x(),
                 )
-                .push(Space::new(Length::Fill, Length::Units(12)))
+                .push(Space::with_height(Length::Units(12)))
                 .push(timer_operations)
-                .push(Space::new(Length::Fill, Length::Units(20)))
+                .push(Space::with_height(Length::Units(20)))
                 .push(
                     Scrollable::new(&mut self.tracked_times_scroll)
                         .push(tracked_times)
