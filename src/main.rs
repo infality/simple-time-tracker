@@ -18,12 +18,14 @@ pub fn main() -> iced::Result {
 }
 
 struct SimpleTimeTracker {
+    is_dark_mode: bool,
     is_running: bool,
     start_time: chrono::DateTime<chrono::Local>,
     pause_time: chrono::DateTime<chrono::Local>,
     tracked_times: Vec<TrackedTime>,
 
     start_stop_button: button::State,
+    dark_mode_button: button::State,
     time_text_input: text_input::State,
     time_input: String,
     description_text_input: text_input::State,
@@ -58,6 +60,7 @@ impl TrackedTime {
 enum Message {
     TimeUpdate,
     StartStopTimer,
+    DarkModeToggle,
     TimeInputChanged(String),
     DescriptionInputChanged(String),
     IndexInputChanged(String),
@@ -153,12 +156,14 @@ impl Application for SimpleTimeTracker {
     fn new(_flags: ()) -> (Self, Command<Message>) {
         (
             Self {
+                is_dark_mode: false,
                 is_running: false,
                 start_time: chrono::Local::now(),
                 pause_time: chrono::Local::now(),
                 tracked_times: Vec::new(),
 
                 start_stop_button: button::State::new(),
+                dark_mode_button: button::State::new(),
                 time_text_input: text_input::State::new(),
                 time_input: String::new(),
                 description_text_input: text_input::State::new(),
@@ -187,6 +192,7 @@ impl Application for SimpleTimeTracker {
                 }
                 self.is_running = !self.is_running;
             }
+            Message::DarkModeToggle => self.is_dark_mode = !self.is_dark_mode,
             Message::TimeInputChanged(input) => {
                 if input.len() < 3 {
                     if input.chars().all(|c| c == ':' || c.is_numeric()) {
@@ -239,6 +245,7 @@ impl Application for SimpleTimeTracker {
                     .size(60),
                 )
                 .style(style::TimerStyle {
+                    is_dark_mode: self.is_dark_mode,
                     is_running: self.is_running,
                     opacity: 1.0,
                 }),
@@ -246,6 +253,7 @@ impl Application for SimpleTimeTracker {
             .push(Container::new(
                 Container::new(Text::new(format!(":{:02}", duration.num_seconds() % 60)).size(60))
                     .style(style::TimerStyle {
+                        is_dark_mode: self.is_dark_mode,
                         is_running: self.is_running,
                         opacity: 0.5,
                     }),
@@ -262,7 +270,29 @@ impl Application for SimpleTimeTracker {
                 .width(Length::Units(75)),
             )
             .on_press(Message::StartStopTimer)
-            .style(style::ButtonStyle { foreground: None }),
+            .style(style::ButtonStyle {
+                is_dark_mode: self.is_dark_mode,
+                foreground: None,
+            }),
+        )
+        .height(Length::Units(60))
+        .center_y();
+
+        let dark_mode_button = Container::new(
+            Button::new(
+                &mut self.dark_mode_button,
+                Container::new(match self.is_dark_mode {
+                    true => Text::new("Light"),
+                    false => Text::new("Dark"),
+                })
+                .center_x()
+                .width(Length::Units(75)),
+            )
+            .on_press(Message::DarkModeToggle)
+            .style(style::ButtonStyle {
+                is_dark_mode: self.is_dark_mode,
+                foreground: None,
+            }),
         )
         .height(Length::Units(60))
         .center_y();
@@ -275,7 +305,10 @@ impl Application for SimpleTimeTracker {
                         .push(
                             Container::new(Text::new("Add "))
                                 .height(Length::Fill)
-                                .center_y(),
+                                .center_y()
+                                .style(style::TextStyle {
+                                    is_dark_mode: self.is_dark_mode,
+                                }),
                         )
                         .push(
                             Container::new(
@@ -287,7 +320,9 @@ impl Application for SimpleTimeTracker {
                                 )
                                 .padding(3)
                                 .width(Length::Units(50))
-                                .style(style::TextInputStyle),
+                                .style(style::TextInputStyle {
+                                    is_dark_mode: self.is_dark_mode,
+                                }),
                             )
                             .height(Length::Fill)
                             .center_y(),
@@ -302,7 +337,10 @@ impl Application for SimpleTimeTracker {
                                 .push(
                                     Container::new(Text::new("to new entry called "))
                                         .height(Length::Fill)
-                                        .center_y(),
+                                        .center_y()
+                                        .style(style::TextStyle {
+                                            is_dark_mode: self.is_dark_mode,
+                                        }),
                                 )
                                 .push(
                                     Container::new(
@@ -313,7 +351,11 @@ impl Application for SimpleTimeTracker {
                                             Message::DescriptionInputChanged,
                                         )
                                         .padding(3)
-                                        .style(style::TextInputStyle),
+                                        .style(
+                                            style::TextInputStyle {
+                                                is_dark_mode: self.is_dark_mode,
+                                            },
+                                        ),
                                     )
                                     .height(Length::Fill)
                                     .width(Length::Fill)
@@ -327,7 +369,10 @@ impl Application for SimpleTimeTracker {
                                 .push(
                                     Container::new(Text::new("or"))
                                         .height(Length::Fill)
-                                        .center_y(),
+                                        .center_y()
+                                        .style(style::TextStyle {
+                                            is_dark_mode: self.is_dark_mode,
+                                        }),
                                 )
                                 .push(Rule::horizontal(8).style(style::RuleStyle))
                                 .height(Length::FillPortion(2)),
@@ -337,7 +382,10 @@ impl Application for SimpleTimeTracker {
                                 .push(
                                     Container::new(Text::new("existing entry with number "))
                                         .height(Length::Fill)
-                                        .center_y(),
+                                        .center_y()
+                                        .style(style::TextStyle {
+                                            is_dark_mode: self.is_dark_mode,
+                                        }),
                                 )
                                 .push(
                                     Container::new(
@@ -349,7 +397,11 @@ impl Application for SimpleTimeTracker {
                                         )
                                         .padding(3)
                                         .width(Length::Units(25))
-                                        .style(style::TextInputStyle),
+                                        .style(
+                                            style::TextInputStyle {
+                                                is_dark_mode: self.is_dark_mode,
+                                            },
+                                        ),
                                     )
                                     .height(Length::Fill)
                                     .center_y(),
@@ -360,7 +412,7 @@ impl Application for SimpleTimeTracker {
                 )
                 .push(
                     Row::new()
-                        .push(Space::with_width(Length::Units(16)))
+                        .push(Space::with_width(Length::Units(24)))
                         .push(
                             Container::new(
                                 Button::new(
@@ -372,7 +424,10 @@ impl Application for SimpleTimeTracker {
                                 )
                                 .on_press(Message::ApplyOperation)
                                 .padding(3)
-                                .style(style::ButtonStyle { foreground: None }),
+                                .style(style::ButtonStyle {
+                                    is_dark_mode: self.is_dark_mode,
+                                    foreground: None,
+                                }),
                             )
                             .height(Length::Fill)
                             .center_y(),
@@ -382,6 +437,7 @@ impl Application for SimpleTimeTracker {
                 )
                 .height(Length::Units(80)),
         )
+        .padding(8)
         .width(Length::Fill)
         .center_x();
 
@@ -398,59 +454,95 @@ impl Application for SimpleTimeTracker {
                                     .push(Text::new(format!("{}", i + 1)).size(28))
                                     .push(Space::with_width(Length::Units(4))),
                             )
-                            .style(style::IndexStyle),
+                            .height(Length::Fill)
+                            .width(Length::Units(50))
+                            .center_x()
+                            .center_y()
+                            .style(style::IndexStyle {
+                                is_dark_mode: self.is_dark_mode,
+                            }),
                         )
                         .push(Space::with_width(Length::Units(8)))
                         .push(
-                            Text::new(format!(
-                                "{}:{:02}",
-                                tracked_time.duration.num_hours(),
-                                tracked_time.duration.num_minutes() % 60
-                            ))
-                            .size(28),
+                            Container::new(
+                                Text::new(format!(
+                                    "{}:{:02}",
+                                    tracked_time.duration.num_hours(),
+                                    tracked_time.duration.num_minutes() % 60
+                                ))
+                                .size(28),
+                            )
+                            .height(Length::Fill)
+                            .center_y()
+                            .style(style::TextStyle {
+                                is_dark_mode: self.is_dark_mode,
+                            }),
                         )
                         .push(Space::with_width(Length::Units(12)))
                         .push(
-                            Tooltip::new(
-                                Text::new(&tracked_time.description)
-                                    .size(28)
-                                    .width(Length::Fill),
-                                &tracked_time.description,
-                                tooltip::Position::FollowCursor,
+                            Container::new(
+                                Tooltip::new(
+                                    Text::new(&tracked_time.description)
+                                        .size(28)
+                                        .width(Length::Fill),
+                                    &tracked_time.description,
+                                    tooltip::Position::FollowCursor,
+                                )
+                                .style(style::TooltipStyle),
                             )
-                            .style(style::TooltipStyle),
+                            .height(Length::Fill)
+                            .width(Length::Fill)
+                            .center_y()
+                            .style(style::TextStyle {
+                                is_dark_mode: self.is_dark_mode,
+                            }),
                         )
                         .push(
-                            Button::new(
-                                &mut tracked_time.copy_button,
-                                Row::new()
-                                    .push(Space::with_width(Length::Units(8)))
-                                    .push(Text::new("Copy Text"))
-                                    .push(Space::with_width(Length::Units(8))),
+                            Container::new(
+                                Button::new(
+                                    &mut tracked_time.copy_button,
+                                    Row::new()
+                                        .push(Space::with_width(Length::Units(8)))
+                                        .push(Text::new("Copy Text"))
+                                        .push(Space::with_width(Length::Units(8))),
+                                )
+                                .on_press(Message::CopyText(i))
+                                .width(Length::Shrink)
+                                .style(style::ButtonStyle {
+                                    is_dark_mode: self.is_dark_mode,
+                                    foreground: None,
+                                }),
                             )
-                            .on_press(Message::CopyText(i))
-                            .width(Length::Shrink)
-                            .style(style::ButtonStyle { foreground: None }),
+                            .height(Length::Fill)
+                            .center_y(),
                         )
                         .push(Space::with_width(Length::Units(8)))
                         .push(
-                            Button::new(
-                                &mut tracked_time.delete_button,
-                                Row::new()
-                                    .push(Space::with_width(Length::Units(8)))
-                                    .push(Text::new("Delete"))
-                                    .push(Space::with_width(Length::Units(8))),
+                            Container::new(
+                                Button::new(
+                                    &mut tracked_time.delete_button,
+                                    Row::new()
+                                        .push(Space::with_width(Length::Units(8)))
+                                        .push(Text::new("Delete"))
+                                        .push(Space::with_width(Length::Units(8))),
+                                )
+                                .on_press(Message::DeleteTrackedTime(i))
+                                .width(Length::Shrink)
+                                .style(style::ButtonStyle {
+                                    is_dark_mode: self.is_dark_mode,
+                                    foreground: Color::from_rgb8(0xc8, 0x40, 0x00).into(),
+                                }),
                             )
-                            .on_press(Message::DeleteTrackedTime(i))
-                            .width(Length::Shrink)
-                            .style(style::ButtonStyle {
-                                foreground: Some(Color::from_rgb8(0xc8, 0x40, 0x00)),
-                            }),
+                            .height(Length::Fill)
+                            .center_y(),
                         )
+                        .push(Space::with_width(Length::Units(8)))
                         .width(Length::Fill),
                 )
-                .padding(10)
-                .style(style::TrackedTimeStyle),
+                .height(Length::Units(50))
+                .style(style::TrackedTimeStyle {
+                    is_dark_mode: self.is_dark_mode,
+                }),
             );
         }
 
@@ -463,7 +555,9 @@ impl Application for SimpleTimeTracker {
                         Row::new()
                             .push(time)
                             .push(Space::with_width(Length::Units(12)))
-                            .push(start_stop_button),
+                            .push(start_stop_button)
+                            .push(Space::with_width(Length::Units(8)))
+                            .push(dark_mode_button),
                     )
                     .width(Length::Fill)
                     .center_x(),
@@ -481,6 +575,9 @@ impl Application for SimpleTimeTracker {
         .height(Length::Fill)
         .padding(20)
         .center_x()
+        .style(style::RootStyle {
+            is_dark_mode: self.is_dark_mode,
+        })
         .into()
     }
 }
