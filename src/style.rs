@@ -28,6 +28,13 @@ const DARK3: Color = Color {
     a: 1.0,
 };
 
+const DARK4: Color = Color {
+    r: 0.28,
+    g: 0.28,
+    b: 0.28,
+    a: 1.0,
+};
+
 const LIGHT_TEXT: Color = Color {
     r: 0.80,
     g: 0.80,
@@ -43,6 +50,20 @@ const LIGHT: Color = Color {
 };
 
 const LIGHT2: Color = Color {
+    r: 0.93,
+    g: 0.93,
+    b: 0.93,
+    a: 1.0,
+};
+
+const LIGHT3: Color = Color {
+    r: 0.86,
+    g: 0.86,
+    b: 0.86,
+    a: 1.0,
+};
+
+const LIGHT4: Color = Color {
     r: 0.79,
     g: 0.79,
     b: 0.79,
@@ -124,19 +145,28 @@ impl text_input::StyleSheet for TextInputStyle {
     fn active(&self) -> text_input::Style {
         text_input::Style {
             background: if self.is_dark_mode {
-                DARK.into()
+                DARK2.into()
             } else {
                 LIGHT.into()
             },
-            border_color: if self.is_dark_mode { GRAY } else { DARK3 },
+            border_color: DARK4,
             border_radius: 0.0,
-            border_width: 1.0,
+            border_width: if self.is_dark_mode { 0.0 } else { 1.0 },
             ..text_input::Style::default()
         }
     }
 
     fn focused(&self) -> text_input::Style {
-        text_input::Style { ..self.active() }
+        text_input::Style {
+            background: if self.is_dark_mode {
+                DARK2.into()
+            } else {
+                LIGHT2.into()
+            },
+            border_color: if self.is_dark_mode { GRAY } else { DARK4 },
+            border_width: 1.0,
+            ..self.active()
+        }
     }
 
     fn placeholder_color(&self) -> Color {
@@ -152,7 +182,11 @@ impl text_input::StyleSheet for TextInputStyle {
     }
 
     fn selection_color(&self) -> Color {
-        Color::from_rgb8(0xb0, 0xb0, 0xb0)
+        if self.is_dark_mode {
+            GRAY
+        } else {
+            LIGHT4
+        }
     }
 }
 
@@ -177,7 +211,7 @@ impl container::StyleSheet for TrackedTimeStyle {
     fn style(&self) -> container::Style {
         container::Style {
             background: if self.is_dark_mode {
-                DARK2.into()
+                Color::from_rgb(0.1, 0.1, 0.1).into()
             } else {
                 LIGHT2.into()
             },
@@ -225,13 +259,13 @@ impl button::StyleSheet for ButtonStyle {
     fn active(&self) -> button::Style {
         button::Style {
             background: if self.is_dark_mode {
-                DARK3.into()
+                DARK2.into()
             } else {
                 LIGHT.into()
             },
-            border_color: if self.is_dark_mode { GRAY } else { DARK3 },
+            border_color: DARK3,
             border_radius: 2.0,
-            border_width: 1.0,
+            border_width: if self.is_dark_mode { 0.0 } else { 1.0 },
             text_color: self.foreground.unwrap_or(if self.is_dark_mode {
                 LIGHT_TEXT
             } else {
@@ -242,10 +276,24 @@ impl button::StyleSheet for ButtonStyle {
     }
 
     fn hovered(&self) -> button::Style {
-        button::Style { ..self.active() }
+        button::Style {
+            background: if self.is_dark_mode {
+                DARK3.into()
+            } else {
+                LIGHT2.into()
+            },
+            ..self.active()
+        }
     }
 
     fn pressed(&self) -> button::Style {
-        button::Style { ..self.hovered() }
+        button::Style {
+            background: if self.is_dark_mode {
+                DARK4.into()
+            } else {
+                LIGHT3.into()
+            },
+            ..self.hovered()
+        }
     }
 }

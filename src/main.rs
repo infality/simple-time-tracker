@@ -446,7 +446,7 @@ impl Application for SimpleTimeTracker {
                                             Message::IndexInputChanged,
                                         )
                                         .padding(3)
-                                        .width(Length::Units(25))
+                                        .width(Length::Units(30))
                                         .style(
                                             style::TextInputStyle {
                                                 is_dark_mode: self.is_dark_mode,
@@ -533,7 +533,7 @@ impl Application for SimpleTimeTracker {
                             Container::new(
                                 Tooltip::new(
                                     Text::new(&tracked_time.description)
-                                        .size(28)
+                                        .size(24)
                                         .width(Length::Fill),
                                     &tracked_time.description,
                                     tooltip::Position::FollowCursor,
