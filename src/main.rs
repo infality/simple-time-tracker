@@ -1,7 +1,6 @@
 #![windows_subsystem = "windows"]
+mod database;
 mod style;
-
-use std::collections::HashMap;
 
 use iced::{
     button, executor, scrollable, text_input, time, tooltip, window, Application, Button,
@@ -9,10 +8,6 @@ use iced::{
     Space, Subscription, Text, TextInput, Tooltip,
 };
 use iced_native::Event;
-use rusqlite::{params, Connection};
-
-const TIME_KEY: &str = "time";
-const DARKMODE_KEY: &str = "darkmode";
 
 pub fn main() -> iced::Result {
     SimpleTimeTracker::run(Settings {
@@ -48,7 +43,7 @@ struct SimpleTimeTracker {
 }
 
 #[derive(Debug, Clone)]
-struct TrackedTime {
+pub struct TrackedTime {
     description: String,
     duration: chrono::Duration,
 
@@ -157,37 +152,6 @@ impl SimpleTimeTracker {
         }
     }
 
-    fn store_state(&self) {
-        let db = Connection::open("simple_time_tracker.sqlite").unwrap();
-
-        db.execute("DELETE FROM States", []).unwrap();
-        let mut stmt = db
-            .prepare("INSERT INTO States (Key, Value) VALUES (?1, ?2)")
-            .unwrap();
-
-        stmt.execute(params![TIME_KEY, self.get_current_duration().num_seconds()])
-            .unwrap();
-
-        stmt.execute(params![DARKMODE_KEY, self.is_dark_mode as i32])
-            .unwrap();
-    }
-
-    fn store_tracked_times(&self) {
-        let db = Connection::open("simple_time_tracker.sqlite").unwrap();
-
-        db.execute("DELETE FROM TrackedTimes", []).unwrap();
-        let mut stmt = db
-            .prepare("INSERT INTO TrackedTimes (Seconds, Description) VALUES (?1, ?2)")
-            .unwrap();
-        for tracked_time in self.tracked_times.iter() {
-            stmt.execute(params![
-                tracked_time.duration.num_seconds(),
-                tracked_time.description
-            ])
-            .unwrap();
-        }
-    }
-
     fn get_current_duration(&self) -> chrono::Duration {
         match self.is_running {
             true => chrono::Local::now() - self.start_time,
@@ -202,58 +166,20 @@ impl Application for SimpleTimeTracker {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
-        let db = Connection::open("simple_time_tracker.sqlite").unwrap();
-
-        db.execute(
-            "CREATE TABLE IF NOT EXISTS States (
-                Key TEXT PRIMARY KEY,
-                Value INTEGER NOT NULL
-        )",
-            [],
-        )
-        .unwrap();
-
-        let mut stmt = db.prepare("SELECT Key, Value FROM States").unwrap();
-        let mut rows = stmt.query([]).unwrap();
-
-        let mut states: HashMap<String, i32> = HashMap::new();
-        while let Some(row) = rows.next().unwrap() {
-            states.insert(row.get(0).unwrap(), row.get(1).unwrap());
-        }
-
-        db.execute(
-            "CREATE TABLE IF NOT EXISTS TrackedTimes (
-                ID INTEGER PRIMARY KEY,
-                Seconds INTEGER NOT NULL,
-                Description TEXT NOT NULL
-        )",
-            [],
-        )
-        .unwrap();
-
-        let mut stmt = db
-            .prepare("SELECT Seconds, Description FROM TrackedTimes")
-            .unwrap();
-        let mut rows = stmt.query([]).unwrap();
-
-        let mut tracked_times = Vec::new();
-        while let Some(row) = rows.next().unwrap() {
-            tracked_times.push(TrackedTime::new(
-                chrono::Duration::seconds(row.get(0).unwrap()),
-                row.get(1).unwrap(),
-            ));
-        }
+        let states = database::load_states();
+        let tracked_times = database::load_tracked_times();
 
         (
             Self {
-                is_dark_mode: if states.contains_key(DARKMODE_KEY) {
-                    states[DARKMODE_KEY] == 1
+                is_dark_mode: if states.contains_key(database::DARKMODE_KEY) {
+                    states[database::DARKMODE_KEY] == 1
                 } else {
                     true
                 },
                 is_running: false,
-                start_time: if states.contains_key(TIME_KEY) {
-                    chrono::Local::now() - chrono::Duration::seconds(states[TIME_KEY].into())
+                start_time: if states.contains_key(database::TIME_KEY) {
+                    chrono::Local::now()
+                        - chrono::Duration::seconds(states[database::TIME_KEY].into())
                 } else {
                     chrono::Local::now()
                 },
