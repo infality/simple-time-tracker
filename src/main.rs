@@ -1,12 +1,18 @@
 #![windows_subsystem = "windows"]
 mod style;
 
+use std::collections::HashMap;
+
 use iced::{
     button, executor, scrollable, text_input, time, tooltip, window, Application, Button,
     Clipboard, Color, Column, Command, Container, Element, Length, Row, Rule, Scrollable, Settings,
     Space, Subscription, Text, TextInput, Tooltip,
 };
+use iced_native::Event;
 use rusqlite::{params, Connection};
+
+const TIME_KEY: &str = "time";
+const DARKMODE_KEY: &str = "darkmode";
 
 pub fn main() -> iced::Result {
     SimpleTimeTracker::run(Settings {
@@ -15,6 +21,7 @@ pub fn main() -> iced::Result {
             min_size: Some((700, 400)),
             ..window::Settings::default()
         },
+        exit_on_close_request: false,
         ..Settings::default()
     })
 }
@@ -26,7 +33,9 @@ struct SimpleTimeTracker {
     pause_time: chrono::DateTime<chrono::Local>,
     tracked_times: Vec<TrackedTime>,
 
+    should_exit: bool,
     start_stop_button: button::State,
+    clear_button: button::State,
     dark_mode_button: button::State,
     time_text_input: text_input::State,
     time_input: String,
@@ -60,8 +69,10 @@ impl TrackedTime {
 
 #[derive(Debug, Clone)]
 enum Message {
+    EventOccurred(iced_native::Event),
     TimeUpdate,
     StartStopTimer,
+    ClearTimer,
     DarkModeToggle,
     TimeInputChanged(String),
     DescriptionInputChanged(String),
@@ -73,10 +84,7 @@ enum Message {
 
 impl SimpleTimeTracker {
     fn apply_operation(&mut self) {
-        let timer = match self.is_running {
-            true => chrono::Local::now() - self.start_time,
-            false => self.pause_time - self.start_time,
-        };
+        let timer = self.get_current_duration();
         let mut duration = chrono::Duration::zero();
 
         // Parse time input
@@ -149,7 +157,22 @@ impl SimpleTimeTracker {
         }
     }
 
-    fn write_to_db(&self) {
+    fn store_state(&self) {
+        let db = Connection::open("simple_time_tracker.sqlite").unwrap();
+
+        db.execute("DELETE FROM States", []).unwrap();
+        let mut stmt = db
+            .prepare("INSERT INTO States (Key, Value) VALUES (?1, ?2)")
+            .unwrap();
+
+        stmt.execute(params![TIME_KEY, self.get_current_duration().num_seconds()])
+            .unwrap();
+
+        stmt.execute(params![DARKMODE_KEY, self.is_dark_mode as i32])
+            .unwrap();
+    }
+
+    fn store_tracked_times(&self) {
         let db = Connection::open("simple_time_tracker.sqlite").unwrap();
 
         db.execute("DELETE FROM TrackedTimes", []).unwrap();
@@ -164,6 +187,13 @@ impl SimpleTimeTracker {
             .unwrap();
         }
     }
+
+    fn get_current_duration(&self) -> chrono::Duration {
+        match self.is_running {
+            true => chrono::Local::now() - self.start_time,
+            false => self.pause_time - self.start_time,
+        }
+    }
 }
 
 impl Application for SimpleTimeTracker {
@@ -175,10 +205,27 @@ impl Application for SimpleTimeTracker {
         let db = Connection::open("simple_time_tracker.sqlite").unwrap();
 
         db.execute(
+            "CREATE TABLE IF NOT EXISTS States (
+                Key TEXT PRIMARY KEY,
+                Value INTEGER NOT NULL
+        )",
+            [],
+        )
+        .unwrap();
+
+        let mut stmt = db.prepare("SELECT Key, Value FROM States").unwrap();
+        let mut rows = stmt.query([]).unwrap();
+
+        let mut states: HashMap<String, i32> = HashMap::new();
+        while let Some(row) = rows.next().unwrap() {
+            states.insert(row.get(0).unwrap(), row.get(1).unwrap());
+        }
+
+        db.execute(
             "CREATE TABLE IF NOT EXISTS TrackedTimes (
-                ID	INTEGER PRIMARY KEY,
-                Seconds	INTEGER NOT NULL,
-                Description	TEXT NOT NULL
+                ID INTEGER PRIMARY KEY,
+                Seconds INTEGER NOT NULL,
+                Description TEXT NOT NULL
         )",
             [],
         )
@@ -199,13 +246,23 @@ impl Application for SimpleTimeTracker {
 
         (
             Self {
-                is_dark_mode: true,
+                is_dark_mode: if states.contains_key(DARKMODE_KEY) {
+                    states[DARKMODE_KEY] == 1
+                } else {
+                    true
+                },
                 is_running: false,
-                start_time: chrono::Local::now(),
+                start_time: if states.contains_key(TIME_KEY) {
+                    chrono::Local::now() - chrono::Duration::seconds(states[TIME_KEY].into())
+                } else {
+                    chrono::Local::now()
+                },
                 pause_time: chrono::Local::now(),
-                tracked_times: tracked_times,
+                tracked_times,
 
+                should_exit: false,
                 start_stop_button: button::State::new(),
+                clear_button: button::State::new(),
                 dark_mode_button: button::State::new(),
                 time_text_input: text_input::State::new(),
                 time_input: String::new(),
@@ -226,6 +283,12 @@ impl Application for SimpleTimeTracker {
 
     fn update(&mut self, message: Message, clipboard: &mut Clipboard) -> Command<Message> {
         match message {
+            Message::EventOccurred(event) => {
+                if let Event::Window(iced_native::window::Event::CloseRequested) = event {
+                    self.store_state();
+                    self.should_exit = true;
+                }
+            }
             Message::TimeUpdate => {}
             Message::StartStopTimer => {
                 if self.is_running {
@@ -234,6 +297,10 @@ impl Application for SimpleTimeTracker {
                     self.start_time = self.start_time + (chrono::Local::now() - self.pause_time);
                 }
                 self.is_running = !self.is_running;
+            }
+            Message::ClearTimer => {
+                self.start_time = chrono::Local::now();
+                self.pause_time = chrono::Local::now();
             }
             Message::DarkModeToggle => self.is_dark_mode = !self.is_dark_mode,
             Message::TimeInputChanged(input) => {
@@ -257,15 +324,15 @@ impl Application for SimpleTimeTracker {
             }
             Message::ApplyOperation => {
                 self.apply_operation();
-                self.write_to_db();
+                self.store_tracked_times();
             }
             Message::DeleteTrackedTime(i) => {
                 self.tracked_times.remove(i);
-                self.write_to_db();
+                self.store_tracked_times();
             }
             Message::CopyText(i) => {
                 clipboard.write(self.tracked_times[i].description.clone());
-                self.write_to_db();
+                self.store_tracked_times();
             }
         }
 
@@ -273,17 +340,22 @@ impl Application for SimpleTimeTracker {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        match self.is_running {
-            true => time::every(std::time::Duration::from_millis(500)).map(|_| Message::TimeUpdate),
-            false => Subscription::none(),
+        let mut subscriptions = Vec::new();
+        subscriptions.push(iced_native::subscription::events().map(Message::EventOccurred));
+        if self.is_running {
+            subscriptions.push(
+                time::every(std::time::Duration::from_millis(500)).map(|_| Message::TimeUpdate),
+            );
         }
+        return Subscription::batch(subscriptions);
+    }
+
+    fn should_exit(&self) -> bool {
+        self.should_exit
     }
 
     fn view(&mut self) -> Element<Message> {
-        let duration = match self.is_running {
-            true => chrono::Local::now() - self.start_time,
-            false => self.pause_time - self.start_time,
-        };
+        let duration = self.get_current_duration();
         let time = Row::new()
             .push(
                 Container::new(
@@ -320,6 +392,22 @@ impl Application for SimpleTimeTracker {
                 .width(Length::Units(75)),
             )
             .on_press(Message::StartStopTimer)
+            .style(style::ButtonStyle {
+                is_dark_mode: self.is_dark_mode,
+                foreground: None,
+            }),
+        )
+        .height(Length::Units(60))
+        .center_y();
+
+        let clear_button = Container::new(
+            Button::new(
+                &mut self.clear_button,
+                Container::new(Text::new("Clear"))
+                    .center_x()
+                    .width(Length::Units(75)),
+            )
+            .on_press(Message::ClearTimer)
             .style(style::ButtonStyle {
                 is_dark_mode: self.is_dark_mode,
                 foreground: None,
@@ -606,6 +694,8 @@ impl Application for SimpleTimeTracker {
                             .push(time)
                             .push(Space::with_width(Length::Units(12)))
                             .push(start_stop_button)
+                            .push(Space::with_width(Length::Units(8)))
+                            .push(clear_button)
                             .push(Space::with_width(Length::Units(8)))
                             .push(dark_mode_button),
                     )

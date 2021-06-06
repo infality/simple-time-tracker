@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 iced = { version = "0.3", features = ["tokio", "svg"] }
+iced_native = "0.4"
 chrono = "0.4"
 rusqlite = { version = "0.25.3", features = ["bundled"] }
 
