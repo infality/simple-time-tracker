@@ -11,7 +11,6 @@ A simple time tracker written in Rust using the [Iced](https://github.com/hecrj/
 ## TODO
 
 - [ ] Releases (currently only windows binaries are uploaded in [Github Actions](https://github.com/infality/simple-time-tracker/actions/workflows/rust.yml))
-- [ ] Store current time and dark mode state on exit in SQLite
 - [ ] Tab movement
 - [ ] Display error messages
 - [ ] Handle and display possible SQLite errors
