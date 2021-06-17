@@ -8,6 +8,11 @@ A simple time tracker written in Rust using the [Iced](https://github.com/hecrj/
 * Dark / Light mode
 * Stores data persistently
 
+## Screenshots
+
+![Dark Mode](https://i.imgur.com/ZFXJT7N.png "Dark Mode")
+![Light Mode](https://i.imgur.com/EONIbfO.png "Light Mode")
+
 ## TODO
 
 - [ ] Releases (currently only windows binaries are uploaded in [Github Actions](https://github.com/infality/simple-time-tracker/actions/workflows/rust.yml))
