@@ -7,6 +7,7 @@ A simple time tracker written in Rust using the [Iced](https://github.com/hecrj/
 * Split tracked time onto multiple actions
 * Dark / Light mode
 * Stores data persistently
+* Track time if application is not running (by storing start time)
 
 ## Screenshots
 

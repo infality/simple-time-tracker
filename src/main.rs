@@ -24,8 +24,8 @@ pub fn main() -> iced::Result {
 struct SimpleTimeTracker {
     is_dark_mode: bool,
     is_running: bool,
-    start_time: chrono::DateTime<chrono::Local>,
-    pause_time: chrono::DateTime<chrono::Local>,
+    start_time: chrono::DateTime<chrono::Utc>,
+    pause_time: chrono::DateTime<chrono::Utc>,
     tracked_times: Vec<TrackedTime>,
 
     should_exit: bool,
@@ -154,7 +154,7 @@ impl SimpleTimeTracker {
 
     fn get_current_duration(&self) -> chrono::Duration {
         match self.is_running {
-            true => chrono::Local::now() - self.start_time,
+            true => chrono::Utc::now() - self.start_time,
             false => self.pause_time - self.start_time,
         }
     }
@@ -169,6 +169,25 @@ impl Application for SimpleTimeTracker {
         let states = database::load_states();
         let tracked_times = database::load_tracked_times();
 
+        let is_running = if states.contains_key(database::PAUSED_KEY) {
+            states[database::PAUSED_KEY] == 0
+        } else {
+            false
+        };
+
+        let start_time = if states.contains_key(database::TIME_KEY) {
+            if is_running {
+                chrono::DateTime::from_utc(
+                    chrono::NaiveDateTime::from_timestamp(states[database::TIME_KEY].into(), 0),
+                    chrono::Utc,
+                )
+            } else {
+                chrono::Utc::now() - chrono::Duration::seconds(states[database::TIME_KEY].into())
+            }
+        } else {
+            chrono::Utc::now()
+        };
+
         (
             Self {
                 is_dark_mode: if states.contains_key(database::DARKMODE_KEY) {
@@ -176,14 +195,9 @@ impl Application for SimpleTimeTracker {
                 } else {
                     true
                 },
-                is_running: false,
-                start_time: if states.contains_key(database::TIME_KEY) {
-                    chrono::Local::now()
-                        - chrono::Duration::seconds(states[database::TIME_KEY].into())
-                } else {
-                    chrono::Local::now()
-                },
-                pause_time: chrono::Local::now(),
+                is_running,
+                start_time,
+                pause_time: chrono::Utc::now(),
                 tracked_times,
 
                 should_exit: false,
@@ -218,15 +232,15 @@ impl Application for SimpleTimeTracker {
             Message::TimeUpdate => {}
             Message::StartStopTimer => {
                 if self.is_running {
-                    self.pause_time = chrono::Local::now();
+                    self.pause_time = chrono::Utc::now();
                 } else {
-                    self.start_time = self.start_time + (chrono::Local::now() - self.pause_time);
+                    self.start_time = self.start_time + (chrono::Utc::now() - self.pause_time);
                 }
                 self.is_running = !self.is_running;
             }
             Message::ClearTimer => {
-                self.start_time = chrono::Local::now();
-                self.pause_time = chrono::Local::now();
+                self.start_time = chrono::Utc::now();
+                self.pause_time = chrono::Utc::now();
             }
             Message::DarkModeToggle => self.is_dark_mode = !self.is_dark_mode,
             Message::TimeInputChanged(input) => {

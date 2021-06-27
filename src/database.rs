@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use crate::{SimpleTimeTracker, TrackedTime};
 
 pub const TIME_KEY: &str = "time";
+pub const PAUSED_KEY: &str = "paused";
 pub const DARKMODE_KEY: &str = "darkmode";
 
 pub fn load_states() -> HashMap<String, i32> {
@@ -65,8 +66,15 @@ impl SimpleTimeTracker {
             .prepare("INSERT INTO States (Key, Value) VALUES (?1, ?2)")
             .unwrap();
 
-        stmt.execute(params![TIME_KEY, self.get_current_duration().num_seconds()])
-            .unwrap();
+        let time = if self.is_running {
+            self.start_time.timestamp()
+        } else {
+            self.get_current_duration().num_seconds()
+        };
+
+        stmt.execute(params![TIME_KEY, time]).unwrap();
+
+        stmt.execute(params![PAUSED_KEY, !self.is_running]).unwrap();
 
         stmt.execute(params![DARKMODE_KEY, self.is_dark_mode as i32])
             .unwrap();
