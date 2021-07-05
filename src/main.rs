@@ -396,6 +396,7 @@ impl Application for SimpleTimeTracker {
                                     &self.time_input,
                                     Message::TimeInputChanged,
                                 )
+                                .on_submit(Message::ApplyOperation)
                                 .padding(3)
                                 .width(Length::Units(50))
                                 .style(style::TextInputStyle {
@@ -428,6 +429,7 @@ impl Application for SimpleTimeTracker {
                                             &self.description_input,
                                             Message::DescriptionInputChanged,
                                         )
+                                        .on_submit(Message::ApplyOperation)
                                         .padding(3)
                                         .style(
                                             style::TextInputStyle {
@@ -473,6 +475,7 @@ impl Application for SimpleTimeTracker {
                                             &self.index_input,
                                             Message::IndexInputChanged,
                                         )
+                                        .on_submit(Message::ApplyOperation)
                                         .padding(3)
                                         .width(Length::Units(30))
                                         .style(
